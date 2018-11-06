@@ -1,0 +1,22 @@
+{
+	"name": "latte_task",
+	"version": "0.0.1",
+	"description": "latte_task",
+	"keywords": [
+		"latte",
+		"latte_task"
+	],
+	"author": "qiongtubao",
+	"main": "lib/index.js",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/qiongtubao/latte_task.git"
+	},
+	"dependencies": {
+		"latte_lib": "*",
+		"@types/node": "*"
+	},
+	"devDependencies": {
+		"chai": "*"
+	}
+}
