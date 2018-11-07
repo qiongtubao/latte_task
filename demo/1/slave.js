@@ -1,4 +1,5 @@
-
+"use strict";
+exports.__esModule = true;
 // import * as latte_db from "latte_db"
 // let config = require("./config/db.json");
 // latte_db.default.redis.bindDB("test", config);
@@ -20,8 +21,8 @@
 //         }
 //     }
 // });
-let execTask = (task, callback) => {
-    console.log(task);
+var execTask = function (task, callback) {
+    console.log('exec', task);
     callback(null, 1);
     // let d = c.create(task)
     // latte_db.default.redis.getConnect((err, connect) => {
@@ -35,7 +36,5 @@ let execTask = (task, callback) => {
     //         callback(null, "ok");
     //     });
     // });
-}
-export {
-    execTask
-}
+};
+exports.execTask = execTask;

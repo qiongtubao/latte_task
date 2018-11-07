@@ -10,10 +10,11 @@ function getTasks(size, callback) {
     }
     callback(null, tasks);
 }
-function deleteTasks(tasks) {
-
+function deleteTasks(tasks, callback) {
+    callback();
 }
 function count(task, result) {
+
     number++
 }
 export {

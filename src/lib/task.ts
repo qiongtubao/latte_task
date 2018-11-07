@@ -4,8 +4,6 @@ export class BaseTask extends latte_lib.events {
     config: any;
     constructor(config: any) {
         super();
-    }
-    init() {
-
+        this.config = config;
     }
 }
