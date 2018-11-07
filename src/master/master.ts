@@ -2,15 +2,18 @@ import { timingSafeEqual } from "crypto";
 import * as latte_lib from "latte_lib"
 import * as Fs from "fs"
 import * as Path from "path"
-enum Status {
+export enum Status {
     READY,
     LOCK,
     CLOSE
 }
-interface Runer {
-    getTask: (size: number, callback: Function) => {},
-    removeTask: (data: any[], callback: Function) => {},
-    finishTask: (task: any, result: any) => {}
+export interface Runer {
+    getTasks: (size: number, callback: Function) => {},
+    deleteTasks: (data: any[], callback: Function) => {},
+    count: (task: any, result: any) => {}
+}
+function randomId() {
+    return (Math.random() * 10000000).toString(16).substr(0, 4) + '-' + (new Date()).getTime() + '-' + Math.random().toString().substr(2, 5);
 }
 export class Master extends latte_lib.events {
     config: any;
@@ -21,7 +24,7 @@ export class Master extends latte_lib.events {
     saveStatus: Status = Status.READY;
     constructor(config, data: Runer) {
         super();
-        this.config = (<any>Object).assign(latte_lib.utils.clone({
+        this.config = (<any>Object).assign(latte_lib.utils.copy({
             saveFile: process.cwd() + "/save.latte",
             min: 10
         }), config);
@@ -29,6 +32,9 @@ export class Master extends latte_lib.events {
         this.load();
     }
     load() {
+        if (!Fs.existsSync(this.config.saveFile)) {
+            return;
+        }
         let data = Fs.readFileSync(this.config.saveFile).toString();
         try {
             let tasks = JSON.parse(data);
@@ -43,19 +49,20 @@ export class Master extends latte_lib.events {
             return;
         }
         this.loadStatus = Status.LOCK;
-        this.data.getTask(this.config.min - this.idleTasks.length, (err, data) => {
+        this.data.getTasks(this.config.min - this.idleTasks.length, (err, data) => {
             if (err) {
                 this.loadStatus = Status.READY;
                 return;
             }
             for (let i = 0, len = data.length; i < len; i++) {
+                data[i]._latteid = randomId();
                 this.idleTasks.push(data[i]);
             }
             this.save();
             if (data.length != 0) {
                 this.emit('addTask', data.length);
             }
-            this.data.removeTask(data, (err) => {
+            this.data.deleteTasks(data, (err) => {
                 if (err) {
                     throw err;
                 }
@@ -64,11 +71,22 @@ export class Master extends latte_lib.events {
         });
     }
     getTask() {
+        if (this.idleTasks.length == 0) {
+            this.addTask();
+            return null;
+        }
         let task = this.idleTasks.shift();
+        this.runingTasks.push(task);
         this.save();
         this.addTask();
         return task;
     }
+    rollbackTask() {
+        let task = this.runingTasks.pop();
+        this.idleTasks.unshift(task);
+        this.save();
+    }
+
     save(callback?) {
         Fs.writeFileSync(this.config.saveFile, latte_lib.format.jsonFormat({
             idleTasks: this.idleTasks,
@@ -78,7 +96,8 @@ export class Master extends latte_lib.events {
     finishTask(task, result) {
         let index = -1;
         for (let i = 0, len = this.runingTasks.length; i < len; i++) {
-            if (this.runingTasks[i].id == task.id) {
+            if (this.runingTasks[i]._latteid == task._latteid) {
+                index = i;
                 break;
             }
         }
@@ -86,14 +105,16 @@ export class Master extends latte_lib.events {
             return;
         }
         this.runingTasks.splice(index, 1);
-        this.data.finishTask(task, result);
+        this.save();
+        this.data.count(task, result);
     }
     static create(config) {
-        if (config.master) {
+        if (config.path) {
             let data;
             try {
-                data = require(config.master.path);
+                data = require(Path.resolve(process.cwd(), config.path));
             } catch (err) {
+                console.log(err);
                 return;
             }
             let master = new Master(config, data);
